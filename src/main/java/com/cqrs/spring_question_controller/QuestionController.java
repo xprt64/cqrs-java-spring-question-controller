@@ -7,18 +7,17 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.security.InvalidParameterException;
+import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/question")
@@ -64,13 +63,27 @@ public class QuestionController {
     @PostMapping("/ask")
     public void dispatchAndReturnEvents(@RequestBody Body requestBody, HttpServletResponse response) throws IOException, ExceptionCaught {
         if (annotatedQuestionAnswerersMap.getMap().get(requestBody.type.replace('$', '.')) == null) {
-            throw new InvalidParameterException("Question class not valid");
+            throw new ExceptionCaught(HttpStatus.BAD_REQUEST, new InvalidParameterException("Question class not valid"));
         }
         Object answeredQuestion = askQuestion(requestBody);
         String jsonResponse = serializer.writeValueAsString(answeredQuestion);
         response.setContentType("application/json");
         try {
             response.getOutputStream().write(jsonResponse.getBytes());
+        } finally {
+            response.getOutputStream().close();
+        }
+    }
+
+    @GetMapping("/index")
+    public void help(HttpServletResponse response) throws IOException, ExceptionCaught {
+        ObjectNode objectNode = serializer.createObjectNode();
+        objectNode.put("description", "answers questions");
+        objectNode.put("validQuestions", String.join(", ", annotatedQuestionAnswerersMap.getMap().keySet().stream().collect(Collectors.toList())));
+
+        response.setContentType("application/json");
+        try {
+            response.getOutputStream().write(objectNode.toPrettyString().getBytes());
         } finally {
             response.getOutputStream().close();
         }
