@@ -60,6 +60,7 @@ public class QuestionController {
         );
     }
 
+    @CrossOrigin
     @PostMapping("/ask")
     public void dispatchAndReturnEvents(@RequestBody Body requestBody, HttpServletResponse response) throws IOException, ExceptionCaught {
         if (annotatedQuestionAnswerersMap.getMap().get(requestBody.type.replace('$', '.')) == null) {

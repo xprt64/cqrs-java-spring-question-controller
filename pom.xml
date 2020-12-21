@@ -6,7 +6,7 @@
 
     <groupId>com.github.xprt64</groupId>
     <artifactId>cqrs-spring-question-controller</artifactId>
-    <version>0.0.2</version>
+    <version>0.0.3</version>
     <build>
         <plugins>
             <plugin>
