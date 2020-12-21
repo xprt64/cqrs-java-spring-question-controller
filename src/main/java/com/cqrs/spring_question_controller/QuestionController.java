@@ -1,8 +1,10 @@
 package com.cqrs.spring_question_controller;
 
 import com.cqrs.aggregates.AggregateCommandHandlingException;
+import com.cqrs.base.Question;
 import com.cqrs.questions.AnnotatedQuestionAnswerersMap;
 import com.cqrs.questions.Asker;
+import com.cqrs.questions.QuestionRejectedByValidators;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
@@ -42,18 +44,30 @@ public class QuestionController {
     private Object askQuestion(Body requestBody) {
         try {
             System.out.println("asking question " + requestBody.type);
-            return asker.askAndReturn(deserializer.readValue(requestBody.payload, Class.forName(requestBody.type)));
-        } catch (AggregateCommandHandlingException e) {
-            e.printStackTrace();
-            throw new ExceptionCaught(HttpStatus.INTERNAL_SERVER_ERROR, e.getCause());
+            return asker.askAndReturn(deserialize(requestBody));
+        } catch (QuestionRejectedByValidators e) {
+            throw new ExceptionCaught(HttpStatus.BAD_REQUEST, e);
         } catch (Throwable e) {
-            e.printStackTrace();
             throw new ExceptionCaught(HttpStatus.INTERNAL_SERVER_ERROR, e);
         }
     }
 
+    private Question deserialize(Body requestBody) throws com.fasterxml.jackson.core.JsonProcessingException, ClassNotFoundException {
+        return (Question) deserializer.readValue(requestBody.payload, Class.forName(requestBody.type));
+    }
+
+    @ExceptionHandler(QuestionRejectedByValidators.class)
+    public ResponseEntity<Error[]> error(QuestionRejectedByValidators ex) {
+        System.out.println( String.format("error: %s: %s", ex.getCause().getClass().getCanonicalName(), ex.getCause().getMessage()));
+        return new ResponseEntity<Error[]>(
+            ex.getErrors().stream().map(e -> new Error(e.getClass().getCanonicalName(), e.getMessage())).toArray(Error[]::new),
+            HttpStatus.BAD_REQUEST
+        );
+    }
+
     @ExceptionHandler(ExceptionCaught.class)
     public ResponseEntity<Error> error(ExceptionCaught ex) {
+        System.out.println( String.format("error: %s: %s", ex.getCause().getClass().getCanonicalName(), ex.getCause().getMessage()));
         return new ResponseEntity<Error>(
             new Error(ex.getCause().getClass().getCanonicalName(), ex.getCause().getMessage()),
             ex.code
