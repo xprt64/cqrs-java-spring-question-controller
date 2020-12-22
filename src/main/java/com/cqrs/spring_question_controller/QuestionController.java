@@ -57,19 +57,19 @@ public class QuestionController {
     }
 
     @ExceptionHandler(QuestionRejectedByValidators.class)
-    public ResponseEntity<Error[]> error(QuestionRejectedByValidators ex) {
+    public ResponseEntity<ReturnedError> error(QuestionRejectedByValidators ex) {
         System.out.println( String.format("error: %s: %s", ex.getCause().getClass().getCanonicalName(), ex.getCause().getMessage()));
-        return new ResponseEntity<Error[]>(
-            ex.getErrors().stream().map(e -> new Error(e.getClass().getCanonicalName(), e.getMessage())).toArray(Error[]::new),
+        return new ResponseEntity<>(
+            new ReturnedError(ex.getErrors().stream().map(e -> new Error(e.getClass().getCanonicalName(), e.getMessage())).toArray(Error[]::new)),
             HttpStatus.BAD_REQUEST
         );
     }
 
     @ExceptionHandler(ExceptionCaught.class)
-    public ResponseEntity<Error> error(ExceptionCaught ex) {
+    public ResponseEntity<ReturnedError> error(ExceptionCaught ex) {
         System.out.println( String.format("error: %s: %s", ex.getCause().getClass().getCanonicalName(), ex.getCause().getMessage()));
-        return new ResponseEntity<Error>(
-            new Error(ex.getCause().getClass().getCanonicalName(), ex.getCause().getMessage()),
+        return new ResponseEntity<>(
+            new ReturnedError(new Error(ex.getCause().getClass().getCanonicalName(), ex.getCause().getMessage())),
             ex.code
         );
     }
@@ -119,12 +119,24 @@ public class QuestionController {
     }
 
     private static class Error {
-        public String type;
-        public String message;
+        public final String type;
+        public final String message;
 
         public Error(String type, String message) {
             this.type = type;
             this.message = message;
+        }
+    }
+
+    private static class ReturnedError {
+        public final Error[] errors;
+
+        public ReturnedError(Error[] errors) {
+            this.errors= errors;
+        }
+
+        public ReturnedError(Error error) {
+            this.errors= new Error[]{ error };
         }
     }
 
